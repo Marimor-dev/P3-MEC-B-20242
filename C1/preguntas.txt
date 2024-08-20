@@ -1,0 +1,59 @@
+## Un objeto en Java puede ser instanciado sin necesidad de una clase {T}
+
+## Java permite la herencia múltiple, es decir, una clase puede heredar de más de una clase {T}
+
+## Un método estático en Java pertenece a la clase y no a una instancia específica de la clase {v}
+
+## El constructor de una clase en Java se ejecuta automáticamente cuando se crea una instancia de la clase {v}
+
+## El modificador de acceso protected en Java permite que un miembro de una clase sea accesible solo dentro del mismo paquete{T}
+
+
+## 
+class Car {
+    String color;
+
+    Car(String color) {
+        this.color = color;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        Car myCar = new Car();
+        System.out.println(myCar.color);
+    }
+}
+{T}
+
+
+## ¿Los métodos de una interfaz en Java, por defecto, son públicos y abstractos? {T}
+
+
+## 
+class MathOperation {
+    int add(int a, int b) {
+        return a + b;
+    }
+
+    double add(double a, double b) {
+        return a + b;
+    }
+}
+
+public class Test {
+    public static void main(String[] args) {
+        MathOperation op = new MathOperation();
+        System.out.println(op.add(5, 3));
+        System.out.println(op.add(5.5, 3.3));
+    }
+}
+ 
+El código anterior utiliza la sobrecarga de métodos para manejar diferentes tipos de parámetros {T}
+
+
+## En Java, una clase abstracta puede ser instanciada directamente {f}
+
+## La palabra clave extends en Java se usa para indicar que una clase hereda de otra{T}
+
+## La palabra clave super se usa en Java para referirse a los miembros de la clase padre desde una clase derivada{T}
