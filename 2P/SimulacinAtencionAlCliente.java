@@ -3,8 +3,10 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
 import java.util.Timer;
+import java.util.TimerTask;
+import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -20,30 +22,38 @@ public class SimulacinAtencionAlCliente extends JFrame {
     private JList<String> colaList;
     private JButton registrarButton;
     private JButton guardarButton;
+    private JButton atenderButton; // Botón para atender paciente
     private File archivoLog;
-
-    private Timer timer; // Timer para atención de pacientes
-    private Timer horaTimer; // Timer para mostrar la hora
-    private int pacientesAtendidos = 0; // Contador de pacientes atendidos
-    private final int MAX_PACIENTES = 10; // Número máximo de pacientes en cola
-    private boolean atendiendo = false; // Estado de atención
+    private JLabel pacienteActualLabel; // Etiqueta para mostrar el paciente actual
 
     public SimulacinAtencionAlCliente() {
+        // Configuración del layout principal
         setLayout(new BorderLayout());
 
+        // Crear panel superior para ingresar datos del paciente
         JPanel panelSuperior = new JPanel(new GridLayout(4, 2));
         inicializarCampos(panelSuperior);
+
         add(panelSuperior, BorderLayout.NORTH);
 
+        // Crear panel inferior para mostrar la cola y control deslizante
         JPanel panelInferior = new JPanel();
         panelInferior.setLayout(new BoxLayout(panelInferior, BoxLayout.Y_AXIS));
         inicializarPanelInferior(panelInferior);
+
         add(panelInferior, BorderLayout.CENTER);
 
+        // Configurar eventos
         configurarEventos();
+
+        // Inicializar el archivo de log
         inicializarArchivoLog();
+
+        // Configurar ventana principal
         configurarVentana();
-        iniciarHoraTimer(); // Cambiado a iniciarHoraTimer
+
+        // Inicializar el Timer para actualizar la hora de llegada
+        iniciarTimer();
     }
 
     private void inicializarCampos(JPanel panelSuperior) {
@@ -74,16 +84,21 @@ public class SimulacinAtencionAlCliente extends JFrame {
         tiempoAtencionSlider.setPaintTicks(true);
         tiempoAtencionSlider.setPaintLabels(true);
 
-        tiempoAtencionLabel = new JLabel("Tiempo de Atención: 15 segundos"); // Cambiado a segundos
+        tiempoAtencionLabel = new JLabel("Tiempo de Atención: 15 minutos");
 
         registrarButton = new JButton("Registrar Paciente");
         guardarButton = new JButton("Guardar Log");
+        atenderButton = new JButton("Atender Paciente"); // Crear el botón para atender paciente
+
+        pacienteActualLabel = new JLabel("Paciente Actual: Ninguno"); // Inicializar la etiqueta del paciente actual
 
         panelInferior.add(scrollPaneCola);
         panelInferior.add(tiempoAtencionSlider);
         panelInferior.add(tiempoAtencionLabel);
         panelInferior.add(registrarButton);
+        panelInferior.add(atenderButton); // Añadir el botón para atender paciente
         panelInferior.add(guardarButton);
+        panelInferior.add(pacienteActualLabel); // Añadir etiqueta al panel inferior
     }
 
     private void configurarEventos() {
@@ -98,6 +113,13 @@ public class SimulacinAtencionAlCliente extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 guardarLog();
+            }
+        });
+
+        atenderButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                atenderPaciente(); // Llamar al método para atender al paciente
             }
         });
 
@@ -131,41 +153,23 @@ public class SimulacinAtencionAlCliente extends JFrame {
         String servicio = (String) servicioComboBox.getSelectedItem();
         String horaLlegada = horaLlegadaField.getText();
 
-        if (!cedula.isEmpty() && !categoria.isEmpty() && !servicio.isEmpty()) {
+        if (!cedula.isEmpty() && !categoria.isEmpty() && !servicio.isEmpty() && !horaLlegada.isEmpty()) {
             colaModel.addElement(cedula + " - " + categoria + " - " + servicio + " - " + horaLlegada);
             actualizarTiempoAtencion();
             cedulaField.setText("");
-
-            // Iniciar atención si se alcanzan 10 pacientes
-            if (colaModel.size() >= MAX_PACIENTES && !atendiendo) {
-                atendiendo = true; // Cambiar a estado de atención
-                atenderPacientes();
-            }
         } else {
             mostrarAdvertencia("Por favor, complete todos los campos.");
         }
     }
 
-    private void atenderPacientes() {
-        // Programar un timer para atender a los pacientes
-        timer = new Timer();
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                if (pacientesAtendidos < colaModel.size()) {
-                    String pacienteAtendido = colaModel.getElementAt(pacientesAtendidos);
-                    mostrarInformacion("Atendiendo: " + pacienteAtendido);
-                    pacientesAtendidos++;
-                    colaModel.remove(0); // Remover el paciente atendido de la cola
-
-                    // Verificar si ya atendimos a 10 pacientes
-                    if (pacientesAtendidos >= MAX_PACIENTES) {
-                        atendiendo = false; // Volver al estado no atendiendo
-                        timer.cancel(); // Detener el timer
-                    }
-                }
-            }
-        }, 0, tiempoAtencionSlider.getValue() * 1000); // Atender cada 'tiempo de atención' segundos
+    private void atenderPaciente() {
+        // Verificar si hay pacientes en la cola
+        if (!colaModel.isEmpty()) {
+            String paciente = colaModel.remove(0); // Obtener y eliminar el primer paciente de la lista
+            pacienteActualLabel.setText("Paciente Actual: " + paciente); // Actualizar la etiqueta del paciente actual
+        } else {
+            mostrarAdvertencia("No hay pacientes en la lista de espera.");
+        }
     }
 
     private void guardarLog() {
@@ -182,7 +186,7 @@ public class SimulacinAtencionAlCliente extends JFrame {
 
     private void actualizarTiempoAtencion() {
         int valorSlider = tiempoAtencionSlider.getValue();
-        tiempoAtencionLabel.setText("Tiempo de Atención: " + valorSlider + " segundos");
+        tiempoAtencionLabel.setText("Tiempo de Atención: " + valorSlider + " minutos");
     }
 
     private void mostrarAdvertencia(String mensaje) {
@@ -194,21 +198,22 @@ public class SimulacinAtencionAlCliente extends JFrame {
     }
 
     private void mostrarInformacion(String mensaje) {
-        JOptionPane.showMessageDialog(this, mensaje, "Información", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, mensaje, "Éxito", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void iniciarHoraTimer() {
-        // Timer para mostrar la hora actual en el campo de hora de llegada
-        horaTimer = new Timer();
+    private void iniciarTimer() {
+        Timer timer = new Timer(true);
         TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
+                // Obtener la hora actual del sistema
                 String horaActual = new SimpleDateFormat("HH:mm:ss").format(new Date());
+                // Actualizar el campo de texto con la hora actual
                 horaLlegadaField.setText(horaActual);
             }
         };
-
-        horaTimer.scheduleAtFixedRate(timerTask, 0, 1000);
+        // Programar el Timer para que se ejecute cada segundo
+        timer.scheduleAtFixedRate(timerTask, 0, 1000);
     }
 
     public static void main(String[] args) {
